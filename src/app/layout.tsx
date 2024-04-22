@@ -4,6 +4,7 @@ import '@/styles/globals.css'
 import { Icons } from '@/components/Icons'
 import SearchBar from '@/components/SearchBar'
 import Providers from '@/components/Providers'
+import { Toaster } from '@/components/ui/Toaster'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang='it'>
       <body className={inter.className}>
         <Providers>
+          <Toaster />
           <div className='relative isolate min-h-screen overflow-hidden border-b border-gray-200 bg-white text-slate-900'>
             <svg
               className='absolute inset-0 -z-10 h-full w-full stroke-gray-200 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]'

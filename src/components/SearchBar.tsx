@@ -1,7 +1,9 @@
 'use client'
 
-import { Button } from '@/components/ui/Button'
+import { Button, buttonVariants } from '@/components/ui/Button'
+import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { useDebouncedCallback } from '@mantine/hooks'
 import { Product } from '@prisma/client'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
@@ -9,7 +11,7 @@ import { Command } from 'cmdk'
 import { Loader2, Search, X } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FC, useRef, useState, useTransition } from 'react'
+import { FC, useEffect, useState, useTransition } from 'react'
 
 interface SearchBarProps {}
 
@@ -21,9 +23,20 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
 
   const [input, setInput] = useState(query)
   const [isTransitioning, startTransition] = useTransition()
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const { data: products, isFetching } = useQuery({
+  const search = () => startTransition(() => router.push(input ? `?query=${input}` : '/'))
+
+  const debouncedSearch = useDebouncedCallback(() => {
+    search()
+  }, 500)
+
+  const { toast } = useToast()
+
+  const {
+    data: products,
+    isFetching,
+    isError,
+  } = useQuery({
     queryKey: ['searchQuery', query],
     queryFn: async () => {
       const { data } = await axios.get(`/api/search?query=${query}`)
@@ -32,38 +45,47 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
     enabled: query.length > 0 ? true : false,
   })
 
-  const search = () => startTransition(() => router.push(`/?query=${input}`))
-
-  const isDirty = !!input && input !== query
+  useEffect(() => {
+    if (isError)
+      toast({
+        title: 'Qualcosa è andato storto',
+        description: 'Non è stato possibile eseguire la ricerca. Per favore, riprova.',
+        variant: 'destructive',
+      })
+  }, [isError])
 
   return (
     <Command label='Command menu' shouldFilter={false}>
       <div className='relative z-10 h-14 w-full bg-white'>
         <Command.Input
           value={input}
-          onValueChange={setInput}
-          placeholder='Cosa vuoi cercare?'
-          disabled={isFetching}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && isDirty) {
-              search()
-            }
-
-            if (e.key === 'Escape') {
-              inputRef?.current?.blur()
-            }
+          onValueChange={(input) => {
+            setInput(input)
+            debouncedSearch()
           }}
-          ref={inputRef}
+          placeholder='Cosa vuoi cercare?'
           className={
             'absolute inset-0 h-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50'
           }
         />
-        <Button className='absolute inset-y-0 right-0 h-full rounded-l-none' size='sm' disabled={isFetching} onClick={() => isDirty && search()}>
+        <span className={buttonVariants({ className: 'absolute inset-y-0 right-0 h-full rounded-l-none', size: 'sm' })}>
           {isFetching ? <Loader2 className='h-6 w-6 animate-spin' /> : <Search className='h-6 w-6' />}
-        </Button>
+        </span>
       </div>
-      <Command.List className={cn('divide-y divide-zinc-100 rounded-b-md bg-white py-4 shadow-md', { hidden: !query || query !== input })}>
-        {query && !isFetching && (
+      {query && <Command.List className={'divide-y divide-zinc-100 rounded-b-md bg-white py-4 shadow-md'}>
+        {isFetching ? (
+          <Command.Loading>
+            <SearchResultSkeleton />
+          </Command.Loading>
+        ) : products?.length ? (
+          <Command.List>
+            {products?.map((p) => (
+              <Command.Item key={p.id} value={p.id} onSelect={(prodId) => router.push(`/products/${prodId}`)}>
+                <SearchResult product={p} />
+              </Command.Item>
+            ))}
+          </Command.List>
+        ) : (
           <Command.Empty className='py-4 text-center'>
             <X className='mx-auto h-8 w-8 text-gray-400' />
             <h3 className='mt-2 text-sm font-semibold text-gray-900'>Nessun risultato</h3>
@@ -72,17 +94,7 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
             </p>
           </Command.Empty>
         )}
-        {products?.map((p) => (
-          <Command.Item value={p.id} onSelect={(prodId) => router.push(`/products/${prodId}`)}>
-            <SearchResult product={p} />
-          </Command.Item>
-        ))}
-        {isFetching && (
-          <Command.Loading>
-            <SearchResultSkeleton />
-          </Command.Loading>
-        )}
-      </Command.List>
+      </Command.List>}
     </Command>
   )
 }
@@ -93,7 +105,7 @@ function SearchResult({ product }: { product: Pick<Product, 'imageId' | 'name' |
   return (
     <div className='mx-auto flex space-x-4 px-8 py-4'>
       <div className='relative flex h-40 w-40 items-center rounded-lg bg-zinc-100'>
-        <Image loading='eager' fill alt='product-image' src={`/${product.imageId}`} />
+        <Image loading='eager' fill sizes='33vw' alt='product-image' src={`/${product.imageId}`} />
       </div>
 
       <div className='w-full flex-1 space-y-2 py-1'>

@@ -1,7 +1,7 @@
 import { products as productsData } from '@/data/products'
-import { db } from '@/lib/prisma'
 import { faker } from '@faker-js/faker'
 import { OpenAIEmbeddings } from '@langchain/openai'
+import { PrismaClient } from '@prisma/client'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import { nanoid } from 'nanoid'
@@ -10,19 +10,24 @@ dotenv.config()
 
 const embeddings = new OpenAIEmbeddings({
   model: 'text-embedding-3-large',
-  dimensions: 384
+  dimensions: 1536,
 })
+
+const db = new PrismaClient()
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!)
 
 async function main() {
+  console.log('[INFO]: Seeding process initialized')
+
   const products = []
 
   try {
     await db.product.deleteMany()
-    const { error } = await supabase.from('product_embedding').delete().neq('id', 0)
-    if (error) throw new Error(error.message)
 
+    const { error } = await supabase.from('product_vector').delete().neq('id', 0)
+    if (error) throw new Error(error.message)
+    
     for (const { imageId, description } of productsData) {
       products.push({
         id: nanoid(),
@@ -38,21 +43,19 @@ async function main() {
 
       const vector = await embeddings.embedDocuments([`${name}: ${description}`])
 
-      const { status, error } = await supabase.from('product_embedding').insert({
+      const { status, error } = await supabase.from('product_vector').insert({
         id,
-        name,
-        description,
+        text: `${name}: ${description}`,
+        metadata: { id, name, description, imageId, price },
         embedding: vector[0],
       })
-      
-      if (error) {
-        throw new Error(error.message)
-      }
+
+      if (error) console.log(error)
 
       console.log(`[SUCCESS] Product ${name} has been successfully seeded!`)
     })
   } catch (error) {
-    console.log(error)
+    console.error(error)
   }
 }
 
