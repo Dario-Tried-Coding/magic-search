@@ -52,7 +52,7 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
         description: 'Non è stato possibile eseguire la ricerca. Per favore, riprova.',
         variant: 'destructive',
       })
-  }, [isError])
+  }, [isError, toast])
 
   return (
     <Command label='Command menu' shouldFilter={false}>
@@ -68,9 +68,9 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
             'absolute inset-0 h-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50'
           }
         />
-        <span className={buttonVariants({ className: 'absolute inset-y-0 right-0 h-full rounded-l-none', size: 'sm' })}>
+        <Button className='absolute inset-y-0 right-0 h-full rounded-l-none' size='sm' onClick={() => search()}>
           {isFetching ? <Loader2 className='h-6 w-6 animate-spin' /> : <Search className='h-6 w-6' />}
-        </span>
+        </Button>
       </div>
       {query && <Command.List className={'divide-y divide-zinc-100 rounded-b-md bg-white py-4 shadow-md'}>
         {isFetching ? (
@@ -80,7 +80,7 @@ const SearchBar: FC<SearchBarProps> = ({}) => {
         ) : products?.length ? (
           <Command.List>
             {products?.map((p) => (
-              <Command.Item key={p.id} value={p.id} onSelect={(prodId) => router.push(`/products/${prodId}`)}>
+              <Command.Item key={p.id} value={p.id}>
                 <SearchResult product={p} />
               </Command.Item>
             ))}

@@ -5,6 +5,7 @@ import { Icons } from '@/components/Icons'
 import SearchBar from '@/components/SearchBar'
 import Providers from '@/components/Providers'
 import { Toaster } from '@/components/ui/Toaster'
+import { Suspense } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -40,11 +41,13 @@ export default function RootLayout({
                 <Icons.Sparkles className='h-16 w-16' />
                 <h1 className='text-4xl font-bold tracking-tight sm:text-6xl'>MagicSearch</h1>
                 <p className='max-w-xl text-center text-lg text-slate-700'>
-                  Un motore di ricerca ibrido splendidamente progettato che migliora l'accuratezza della ricerca interrogando risultati semanticamente
+                  Un motore di ricerca ibrido splendidamente progettato che migliora l&apos;accuratezza della ricerca interrogando risultati semanticamente
                   correlati.
                 </p>
                 <div className='mx-auto mt-16 flex w-full max-w-2xl flex-col'>
-                  <SearchBar />
+                  <Suspense>
+                    <SearchBar />
+                  </Suspense>
                   {children}
                 </div>
               </div>
